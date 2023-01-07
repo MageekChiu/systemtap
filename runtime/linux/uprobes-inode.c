@@ -730,7 +730,8 @@ stapiu_get_task_inode(struct task_struct *task)
 	vm_file = stap_find_exe_file(mm);
 	if (vm_file) {
 		if (vm_file->f_path.dentry)
-			inode = vm_file->f_path.dentry->d_inode;
+			// inode = vm_file->f_path.dentry->d_inode;
+			inode = d_backing_inode(d_real((struct dentry *) vm_file->f_path.dentry, NULL));
 		fput(vm_file);
 	}
 	return inode;
@@ -811,6 +812,7 @@ stapiu_mmap_found(struct stap_task_finder_target *tf_target,
   struct stapiu_process* p;
   int known_mapping_p;
   unsigned long flags;
+  struct inode *inode_1;
 
   /*
   We need to verify that this file/mmap corresponds to the given stapiu_consumer.
@@ -923,9 +925,11 @@ stapiu_mmap_found(struct stap_task_finder_target *tf_target,
   }
 
   /* Check non-writable, executable sections for probes. */
+  inode_1 = d_backing_inode(d_real((struct dentry *) dentry, NULL));
   if ((vm_flags & VM_EXEC) && !(vm_flags & VM_WRITE))
     rc = stapiu_change_plus(c, task, addr, length,
-			     offset, vm_flags, dentry->d_inode);
+			     // offset, vm_flags, dentry->d_inode);
+			     offset, vm_flags, inode_1);
 
   /* Check writeable sections for semaphores.
    * NB: They may have also been executable for the check above,
